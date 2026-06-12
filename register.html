@@ -270,14 +270,14 @@
   <!-- STEP 1: Personal Details -->
   <div id="step1" class="card">
     <h2>Your Details</h2>
-    <p class="subtitle">Enter your name and email to get started</p>
+    <p class="subtitle">Enter your name and last 4 phone digits to get started</p>
     <div class="field">
       <label>Full Name</label>
       <input type="text" id="inp-name" placeholder="e.g. John Mwangi" autocomplete="name">
     </div>
     <div class="field">
-      <label>Email Address</label>
-      <input type="email" id="inp-email" placeholder="e.g. john@wemaclinic.com" autocomplete="email">
+      <label>Last 4 Digits of Your Phone</label>
+      <input type="text" id="inp-email" placeholder="e.g. 7823" maxlength="4" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}">
     </div>
     <div id="step1-error" class="alert alert-danger hidden"></div>
     <button class="btn btn-primary" onclick="goStep2()">Next — Pick My Teams →</button>
@@ -334,7 +334,7 @@
 // CONFIG — Replace with your deployed Apps Script URL
 // ================================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbyO0bUHn03KKOAcAni4OJLDIIncAODvl6Qj5xlIK9ryQcij4jPpjhMwhA8Vhieu-m5z/exec';
-const DEADLINE = new Date('2026-06-12T23:59:59');
+const DEADLINE = new Date('2026-06-15T23:00:00');
 
 // ---- TEAM DATA ----
 const GROUPS = {
@@ -413,12 +413,11 @@ function goStep1() {
 
 function goStep2() {
   playerName  = document.getElementById('inp-name').value.trim();
-  playerEmail = document.getElementById('inp-email').value.trim().toLowerCase();
+  playerEmail = document.getElementById('inp-email').value.trim();
   const err   = document.getElementById('step1-error');
 
   if (!playerName) { showErr(err, 'Please enter your name.'); return; }
-  const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRx.test(playerEmail)) { showErr(err, 'Please enter a valid email address.'); return; }
+  if (!/^\d{4}$/.test(playerEmail)) { showErr(err, 'Please enter exactly 4 digits of your phone number.'); return; }
   err.classList.add('hidden');
   setStep(2);
 }
