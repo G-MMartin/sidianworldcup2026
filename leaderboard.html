@@ -238,6 +238,55 @@
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
     .hidden { display: none !important; }
+    /* ===== TABS ===== */
+    .lb-tabs { display:flex; background:var(--surface); border-bottom:1px solid var(--border); }
+    .lb-tab-btn { flex:1; padding:12px 8px; background:none; border:none; color:var(--muted); font-size:0.78rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
+    .lb-tab-btn.active { color:var(--text); border-bottom-color:var(--primary-light); }
+    .lb-tab-content { display:none; }
+    .lb-tab-content.active { display:block; }
+
+    /* ===== BRACKET ===== */
+    .bracket-wrap { padding:16px 14px 40px; max-width:600px; margin:0 auto; }
+    .round-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+    .round-pill { padding:6px 14px; border-radius:20px; font-size:0.75rem; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); transition:all 0.2s; }
+    .round-pill.active { background:var(--primary); border-color:var(--primary-light); color:#fff; }
+    .bracket-match-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:8px; }
+    .bmc-pos { font-size:0.65rem; font-weight:700; color:var(--primary-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+    .bmc-teams { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .bmc-team { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:10px 12px; text-align:center; font-weight:700; font-size:0.85rem; }
+    .bmc-team.winner { border-color:var(--warning); background:rgba(255,215,0,0.08); color:var(--warning); }
+    .bmc-team.loser { opacity:0.4; }
+    .bmc-team.tbd { color:var(--muted); font-style:italic; }
+    .bmc-vs { color:var(--muted); font-size:0.78rem; font-weight:700; flex-shrink:0; }
+    .bmc-pickers { display:flex; justify-content:space-between; margin-top:8px; font-size:0.68rem; color:var(--muted); }
+    .bmc-picker-tag { background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:2px 6px; }
+    .bmc-picker-tag.highlight { border-color:var(--primary-light); color:var(--primary-light); }
+    .no-bracket { text-align:center; padding:40px 20px; color:var(--muted); font-size:0.85rem; }
+
+    /* ===== STATS ===== */
+    .stats-wrap { padding:16px 14px 40px; max-width:600px; margin:0 auto; }
+    .stat-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
+    .stat-card .sc-val { font-size:1.6rem; font-weight:800; color:var(--primary-light); }
+    .stat-card .sc-label { font-size:0.7rem; color:var(--muted); margin-top:4px; }
+    .stat-card .sc-name { font-size:0.8rem; font-weight:700; margin-top:4px; }
+    .section-hdr { font-size:0.7rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; }
+    .player-stat-row { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:6px; }
+    .psr-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .psr-name { font-weight:700; font-size:0.88rem; }
+    .psr-total { font-size:1rem; font-weight:800; color:var(--primary-light); }
+    .psr-bars { display:flex; gap:6px; flex-wrap:wrap; }
+    .psr-bar { font-size:0.68rem; padding:3px 8px; border-radius:4px; font-weight:600; }
+    .psr-bar.match { background:rgba(58,118,245,0.15); color:var(--primary-light); border:1px solid rgba(58,118,245,0.3); }
+    .psr-bar.bonus { background:rgba(255,171,64,0.12); color:var(--warning); border:1px solid rgba(255,171,64,0.25); }
+    .psr-bar.wins  { background:rgba(0,230,118,0.1);  color:var(--success); border:1px solid rgba(0,230,118,0.25); }
+    .psr-bar.upset { background:rgba(107,197,255,0.1); color:#6bc5ff; border:1px solid rgba(107,197,255,0.25); }
+    .most-picked { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .mp-item { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; }
+    .mp-team { font-weight:600; font-size:0.8rem; }
+    .mp-count { font-size:0.88rem; font-weight:800; color:var(--primary-light); }
+    .stats-loading { text-align:center; padding:40px; color:var(--muted); }
+
   </style>
 </head>
 <body>
@@ -252,52 +301,63 @@
   <div class="stat-item">Last Updated: <span id="stat-updated">—</span></div>
 </div>
 
-<div class="container">
-
-  <!-- Scoring legend -->
-  <div class="bonus-legend">
-    <h3>🎯 Scoring Guide</h3>
-    <div class="bonus-items">
-      <div class="bonus-item">CAT 1 <span>Win=1pt</span></div>
-      <div class="bonus-item">CAT 2 <span>Win=2pts</span></div>
-      <div class="bonus-item">CAT 3 <span>Win=3pts</span></div>
-      <div class="bonus-item">CAT 4 <span>Win=4pts</span></div>
-      <div class="bonus-item">Draw <span>=½pts</span></div>
-      <div class="bonus-item">R16 <span>+2 bonus</span></div>
-      <div class="bonus-item">QF <span>+3 bonus</span></div>
-      <div class="bonus-item">SF <span>+5 bonus</span></div>
-      <div class="bonus-item">Final <span>+8 bonus</span></div>
-      <div class="bonus-item">🏆 Champ <span>+12 bonus</span></div>
-    </div>
-  </div>
-
-  <!-- Podium (top 3) -->
-  <div id="podium" class="podium hidden"></div>
-
-  <!-- Loading -->
-  <div id="loading" class="loading">
-    <div class="loading-spinner"></div>
-    <div>Loading standings...</div>
-  </div>
-
-  <!-- Empty state -->
-  <div id="empty" class="empty hidden">
-    No players registered yet. Be the first! 🚀
-  </div>
-
-  <!-- Leaderboard -->
-  <div id="leaderboard-list"></div>
-
-  <div class="refresh-info">
-    <span class="pulse">●</span> Auto-refreshes every 3 minutes
-  </div>
-
+<!-- TABS -->
+<div class="lb-tabs">
+  <button class="lb-tab-btn active" onclick="switchTab('standings',this)">🏅 Standings</button>
+  <button class="lb-tab-btn" onclick="switchTab('bracket',this)">🏆 Bracket</button>
+  <button class="lb-tab-btn" onclick="switchTab('stats',this)">📊 Stats</button>
 </div>
 
+<!-- ===== STANDINGS TAB ===== -->
+<div id="tab-standings" class="lb-tab-content active">
+  <div class="container">
+    <div class="bonus-legend">
+      <h3>🎯 Scoring Guide</h3>
+      <div class="bonus-items">
+        <div class="bonus-item">CAT 1 <span>Win=1pt</span></div>
+        <div class="bonus-item">CAT 2 <span>Win=2pts</span></div>
+        <div class="bonus-item">CAT 3 <span>Win=3pts</span></div>
+        <div class="bonus-item">CAT 4 <span>Win=4pts</span></div>
+        <div class="bonus-item">Draw <span>=½pts</span></div>
+        <div class="bonus-item">R32 <span>+1</span></div>
+        <div class="bonus-item">R16 <span>+2</span></div>
+        <div class="bonus-item">QF <span>+3</span></div>
+        <div class="bonus-item">SF <span>+5</span></div>
+        <div class="bonus-item">Final <span>+8</span></div>
+        <div class="bonus-item">🏆 Champ <span>+12</span></div>
+      </div>
+    </div>
+    <div id="podium" class="podium hidden"></div>
+    <div id="loading" class="loading"><div class="loading-spinner"></div><div>Loading standings...</div></div>
+    <div id="empty" class="empty hidden">No players registered yet. Be the first! 🚀</div>
+    <div id="leaderboard-list"></div>
+    <div class="refresh-info"><span class="pulse">●</span> Auto-refreshes every 3 minutes</div>
+  </div>
+</div>
+
+<!-- ===== BRACKET TAB ===== -->
+<div id="tab-bracket" class="lb-tab-content">
+  <div class="bracket-wrap">
+    <div class="round-tabs">
+      <div class="round-pill active" onclick="selectRound('R32',this)">R32</div>
+      <div class="round-pill" onclick="selectRound('R16',this)">R16</div>
+      <div class="round-pill" onclick="selectRound('QF',this)">QF</div>
+      <div class="round-pill" onclick="selectRound('SF',this)">SF</div>
+      <div class="round-pill" onclick="selectRound('Final',this)">Final</div>
+    </div>
+    <div id="bracket-loading" class="loading hidden"><div class="loading-spinner"></div><div>Loading bracket...</div></div>
+    <div id="bracket-content"></div>
+  </div>
+</div>
+
+<!-- ===== STATS TAB ===== -->
+<div id="tab-stats" class="lb-tab-content">
+  <div class="stats-wrap">
+    <div id="stats-loading" class="stats-loading"><div class="loading-spinner"></div><div>Loading stats...</div></div>
+    <div id="stats-content" class="hidden"></div>
+  </div>
+</div>
 <script>
-// ================================================================
-// CONFIG — Replace with your deployed Apps Script URL
-// ================================================================
 const API_URL = 'https://script.google.com/macros/s/AKfycbyO0bUHn03KKOAcAni4OJLDIIncAODvl6Qj5xlIK9ryQcij4jPpjhMwhA8Vhieu-m5z/exec';
 
 const CAT_MAP = {
@@ -305,83 +365,76 @@ const CAT_MAP = {
   'Belgium':1,'Netherlands':1,'Germany':1,'Uruguay':1,'Colombia':1,'USA':1,
   'Mexico':2,'Japan':2,'Morocco':2,'Switzerland':2,'Senegal':2,'Korea Republic':2,
   'Ecuador':2,'Canada':2,'Croatia':2,'Australia':2,'Norway':2,'Ghana':2,'Sweden':2,
-  "Algeria":3,"Austria":3,"Côte d'Ivoire":3,"Tunisia":3,"Qatar":3,
-  "Saudi Arabia":3,"Egypt":3,"IR Iran":3,"Paraguay":3,"South Africa":3,
-  "Panama":3,"Uzbekistan":3,"Czechia":3,"Bosnia and Herzegovina":3,
-  "Türkiye":3,"Congo DR":3,
-  "Scotland":4,"New Zealand":4,"Jordan":4,"Curaçao":4,"Cabo Verde":4,
-  "Haiti":4,"Iraq":4
+  "Algeria":3,"Austria":3,"Côte d'Ivoire":3,"Tunisia":3,"Qatar":3,"Saudi Arabia":3,
+  "Egypt":3,"IR Iran":3,"Paraguay":3,"South Africa":3,"Panama":3,"Uzbekistan":3,
+  "Czechia":3,"Bosnia and Herzegovina":3,"Türkiye":3,"Congo DR":3,
+  "Scotland":4,"New Zealand":4,"Jordan":4,"Curaçao":4,"Cabo Verde":4,"Haiti":4,"Iraq":4
 };
 
 const GROUP_KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+let currentRound = 'R32';
+let bracketData  = [];
+let picksData    = [];
 
+// ---- TABS ----
+function switchTab(tab, btn) {
+  document.querySelectorAll('.lb-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.lb-tab-content').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'bracket') loadBracket();
+  if (tab === 'stats')   loadStats();
+}
+
+// ---- STANDINGS ----
 async function loadLeaderboard() {
   document.getElementById('loading').classList.remove('hidden');
   document.getElementById('leaderboard-list').innerHTML = '';
   document.getElementById('podium').classList.add('hidden');
   document.getElementById('empty').classList.add('hidden');
-
   try {
-    const res  = await fetch(`${API_URL}?action=leaderboard`);
+    const res  = await fetch(API_URL + '?action=leaderboard');
     const data = await res.json();
+    picksData  = data.leaderboard || [];
     renderLeaderboard(data);
-  } catch (e) {
-    document.getElementById('loading').innerHTML =
-      '<div style="color:var(--danger)">⚠️ Could not load data. Check connection.</div>';
+  } catch(e) {
+    document.getElementById('loading').innerHTML = '<div style="color:var(--danger)">⚠️ Could not load data.</div>';
   }
 }
 
 function renderLeaderboard(data) {
   document.getElementById('loading').classList.add('hidden');
   const lb = data.leaderboard || [];
-
   document.getElementById('stat-players').textContent = lb.length;
   if (data.lastUpdated) {
     const d = new Date(data.lastUpdated);
-    document.getElementById('stat-updated').textContent =
-      d.toLocaleTimeString('en-KE', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('stat-updated').textContent = d.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
   }
+  if (lb.length === 0) { document.getElementById('empty').classList.remove('hidden'); return; }
 
-  if (lb.length === 0) {
-    document.getElementById('empty').classList.remove('hidden');
-    return;
-  }
-
-  // Podium (top 3)
+  // Podium
   if (lb.length >= 2) {
     const podium = document.getElementById('podium');
     podium.classList.remove('hidden');
-    const medals = [
-      {rank:1,crown:'🥇',cls:'podium-1',icon:'1'},
-      {rank:2,crown:'🥈',cls:'podium-2',icon:'2'},
-      {rank:3,crown:'🥉',cls:'podium-3',icon:'3'}
-    ];
-    const order = lb.length >= 3 ? [1,0,2] : [1,0]; // 2nd, 1st, 3rd layout
+    const medals = [{crown:'🥇',cls:'podium-1',icon:'1'},{crown:'🥈',cls:'podium-2',icon:'2'},{crown:'🥉',cls:'podium-3',icon:'3'}];
+    const order  = lb.length >= 3 ? [1,0,2] : [1,0];
     podium.innerHTML = order.map(i => {
       if (!lb[i]) return '';
       const m = medals[i];
-      return `
-        <div class="podium-item ${m.cls}">
-          <div class="podium-crown">${m.crown}</div>
-          <div class="podium-name">${escHtml(lb[i].name)}</div>
-          <div class="podium-pts">${lb[i].total} pts</div>
-          <div class="podium-block">${m.icon}</div>
-        </div>`;
+      return `<div class="podium-item ${m.cls}"><div class="podium-crown">${m.crown}</div><div class="podium-name">${esc(lb[i].name)}</div><div class="podium-pts">${lb[i].total} pts</div><div class="podium-block">${m.icon}</div></div>`;
     }).join('');
   }
 
-  // Full list
   const list = document.getElementById('leaderboard-list');
   list.innerHTML = '';
   lb.forEach((player, idx) => {
     const rank = idx + 1;
-    const rankClass = rank <= 3 ? `rank-${rank}` : '';
     const card = document.createElement('div');
     card.className = 'lb-card';
     card.innerHTML = `
       <div class="lb-row" onclick="togglePicks(this)">
-        <div class="lb-rank ${rankClass}">${rank}</div>
-        <div class="lb-name">${escHtml(player.name)}</div>
+        <div class="lb-rank ${rank<=3?'rank-'+rank:''}">${rank}</div>
+        <div class="lb-name">${esc(player.name)}</div>
         <div class="lb-pts-col">
           <div class="lb-total">${player.total} pts</div>
           <div class="lb-breakdown">⚽ ${player.matchPoints} + 🎁 ${player.bonusPoints}</div>
@@ -392,14 +445,9 @@ function renderLeaderboard(data) {
         <div class="picks-title">Picked Teams</div>
         <div class="picks-grid">
           ${GROUP_KEYS.map(g => {
-            const team = player.picks[g] || '—';
-            const cat  = CAT_MAP[team] || '?';
-            return `
-              <div class="pick-item">
-                <div class="pick-group">GRP ${g}</div>
-                <div class="pick-team">${escHtml(team)}</div>
-                <span class="cat-badge cat-${cat}">CAT ${cat}</span>
-              </div>`;
+            const team = player.picks[g]||'—';
+            const cat  = CAT_MAP[team]||'?';
+            return `<div class="pick-item"><div class="pick-group">GRP ${g}</div><div class="pick-team">${esc(team)}</div><span class="cat-badge cat-${cat}">CAT ${cat}</span></div>`;
           }).join('')}
         </div>
       </div>`;
@@ -416,15 +464,153 @@ function togglePicks(row) {
   arrow.textContent = open ? '▴' : '▾';
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// ---- BRACKET ----
+function selectRound(round, el) {
+  document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  currentRound = round;
+  renderBracketRound();
 }
 
-// Load on start and auto-refresh every 3 minutes
+async function loadBracket() {
+  if (bracketData.length) { renderBracketRound(); return; }
+  document.getElementById('bracket-loading').classList.remove('hidden');
+  document.getElementById('bracket-content').innerHTML = '';
+  try {
+    const res  = await fetch(API_URL + '?action=get_bracket');
+    const data = await res.json();
+    bracketData = data.bracket || [];
+    renderBracketRound();
+  } catch(e) {
+    document.getElementById('bracket-content').innerHTML = '<div class="no-bracket">⚠️ Could not load bracket.</div>';
+  }
+  document.getElementById('bracket-loading').classList.add('hidden');
+}
+
+function renderBracketRound() {
+  const div     = document.getElementById('bracket-content');
+  const matches = bracketData.filter(b => b.Stage === currentRound);
+
+  if (!matches.length) {
+    const labels = {R32:'Round of 32',R16:'Round of 16',QF:'Quarter-Finals',SF:'Semi-Finals',Final:'Final'};
+    div.innerHTML = `<div class="no-bracket">🕐 ${labels[currentRound]||currentRound} bracket not set yet.<br><span style="font-size:0.75rem">Check back once teams qualify.</span></div>`;
+    return;
+  }
+
+  // Build picker map: team → list of player names
+  const pickerMap = {};
+  picksData.forEach(player => {
+    Object.values(player.picks||{}).forEach(team => {
+      if (!pickerMap[team]) pickerMap[team] = [];
+      pickerMap[team].push(player.name);
+    });
+  });
+
+  div.innerHTML = matches.sort((a,b) => Number(a.Position)-Number(b.Position)).map(m => {
+    const t1 = m.Team1 || 'TBD', t2 = m.Team2 || 'TBD';
+    const winner = m.Winner || '';
+    const t1Class = winner ? (winner===t1 ? 'winner' : 'loser') : (t1==='TBD'?'tbd':'');
+    const t2Class = winner ? (winner===t2 ? 'winner' : 'loser') : (t2==='TBD'?'tbd':'');
+    const p1 = pickerMap[t1] ? pickerMap[t1].map(n=>`<span class="bmc-picker-tag highlight">${esc(n)}</span>`).join('') : '';
+    const p2 = pickerMap[t2] ? pickerMap[t2].map(n=>`<span class="bmc-picker-tag highlight">${esc(n)}</span>`).join('') : '';
+    return `
+      <div class="bracket-match-card">
+        <div class="bmc-pos">Match ${m.Position} ${winner ? '· <span style="color:var(--warning)">🏆 '+esc(winner)+'</span>' : ''}</div>
+        <div class="bmc-teams">
+          <div class="bmc-team ${t1Class}">${esc(t1)}</div>
+          <div class="bmc-vs">vs</div>
+          <div class="bmc-team ${t2Class}">${esc(t2)}</div>
+        </div>
+        ${(p1||p2) ? `<div class="bmc-pickers"><div>${p1||'<span class="bmc-picker-tag">No picks</span>'}</div><div>${p2||'<span class="bmc-picker-tag">No picks</span>'}</div></div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ---- STATS ----
+async function loadStats() {
+  document.getElementById('stats-loading').classList.remove('hidden');
+  document.getElementById('stats-content').classList.add('hidden');
+  try {
+    const res  = await fetch(API_URL + '?action=get_stats');
+    const data = await res.json();
+    renderStats(data);
+  } catch(e) {
+    document.getElementById('stats-loading').innerHTML = '<div style="color:var(--danger)">⚠️ Could not load stats.</div>';
+  }
+}
+
+function renderStats(data) {
+  document.getElementById('stats-loading').classList.add('hidden');
+  const div = document.getElementById('stats-content');
+  div.classList.remove('hidden');
+
+  const ps = data.playerStats || [];
+  const mp = data.mostPicked  || [];
+  const leader   = ps[0] || null;
+  const topUpset = ps.slice().sort((a,b)=>b.upsetPts-a.upsetPts)[0] || null;
+  const topWins  = ps.slice().sort((a,b)=>b.wins-a.wins)[0] || null;
+
+  let html = `
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="sc-val">${data.totalMatches||0}</div>
+        <div class="sc-label">Matches Played</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val">${data.totalPlayers||0}</div>
+        <div class="sc-label">Players</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val">${leader ? leader.total : '—'}</div>
+        <div class="sc-label">Top Score</div>
+        <div class="sc-name">${leader ? esc(leader.name) : ''}</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-val">${topUpset ? topUpset.upsetPts : '—'}</div>
+        <div class="sc-label">Upset King pts</div>
+        <div class="sc-name">${topUpset ? esc(topUpset.name) : ''}</div>
+      </div>
+    </div>
+
+    <div class="section-hdr">Player Breakdown</div>`;
+
+  if (!ps.length) {
+    html += '<div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem">No data yet.</div>';
+  } else {
+    html += ps.map((p,i) => `
+      <div class="player-stat-row">
+        <div class="psr-top">
+          <div class="psr-name">${i+1}. ${esc(p.name)}</div>
+          <div class="psr-total">${p.total} pts</div>
+        </div>
+        <div class="psr-bars">
+          <span class="psr-bar match">⚽ ${p.matchPoints} match</span>
+          <span class="psr-bar bonus">🎁 ${p.bonusPoints} bonus</span>
+          <span class="psr-bar wins">✅ ${p.wins} wins</span>
+          <span class="psr-bar upset">⚡ ${p.upsetPts} upset pts</span>
+        </div>
+      </div>`).join('');
+  }
+
+  if (mp.length) {
+    html += `<div class="section-hdr">Most Picked Teams</div><div class="most-picked">`;
+    html += mp.map(m => `
+      <div class="mp-item">
+        <div class="mp-team">${esc(m.team)}</div>
+        <div class="mp-count">${m.count} <span style="font-size:0.65rem;color:var(--muted)">picks</span></div>
+      </div>`).join('');
+    html += '</div>';
+  }
+
+  div.innerHTML = html;
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Init
 loadLeaderboard();
 setInterval(loadLeaderboard, 3 * 60 * 1000);
 </script>
 </body>
-</html>
