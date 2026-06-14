@@ -141,7 +141,17 @@
   <!-- FETCH & CONFIRM TAB -->
   <div id="tab-fetch" class="tab-content active">
     <div style="margin-bottom:14px">
-      <button class="btn btn-warning btn-full" onclick="fetchToday()">📡 Fetch Today's Matches</button>
+      <div class="row" style="margin-bottom:8px">
+        <div class="field">
+          <label>Match Date</label>
+          <input type="date" id="fetch-date">
+        </div>
+        <div class="field">
+          <label>To Date (optional range)</label>
+          <input type="date" id="fetch-date-to">
+        </div>
+      </div>
+      <button class="btn btn-warning btn-full" onclick="fetchAndSave()">📡 Fetch &amp; Auto-Save Matches</button>
     </div>
 
     <div id="fetch-msg" class="hidden"></div>
@@ -320,6 +330,7 @@ function populateSelects() {
     ALL_TEAMS.forEach(t => { const o = document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o); });
   });
   document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('fetch-date').value = new Date().toISOString().split('T')[0];
 }
 
 function toggleGrp() {
@@ -340,61 +351,89 @@ function switchTab(tab) {
 
 function loadAll() { loadMatches(); loadBonuses(); loadPlayers(); loadBracket(); }
 
-// ---- FETCH TODAY ----
-async function fetchToday() {
-  const apiKey = '090be0397ceb497eaf7526dcd7f857d3';
+// ---- FETCH & AUTO-SAVE ----
+async function fetchAndSave() {
+  const apiKey   = '090be0397ceb497eaf7526dcd7f857d3';
+  const dateFrom = document.getElementById('fetch-date').value;
+  const dateTo   = document.getElementById('fetch-date-to').value || dateFrom;
+  const msgEl    = document.getElementById('fetch-msg');
+
+  if (!dateFrom) { showMsg(msgEl, 'Please select a date.', 'warning'); return; }
+
   document.getElementById('fetch-loading').classList.remove('hidden');
   document.getElementById('fetch-results').innerHTML = '';
-  document.getElementById('fetch-msg').classList.add('hidden');
+  msgEl.classList.add('hidden');
+
   try {
-    const res  = await fetch(`${API_URL}?action=fetch_today&password=${encodeURIComponent(adminPassword)}&apiKey=${encodeURIComponent(apiKey)}`);
+    const res  = await fetch(`${API_URL}?action=fetch_today&password=${encodeURIComponent(adminPassword)}&apiKey=${encodeURIComponent(apiKey)}&dateFrom=${dateFrom}&dateTo=${dateTo}`);
     const data = await res.json();
     document.getElementById('fetch-loading').classList.add('hidden');
-    if (data.error) { showMsg(document.getElementById('fetch-msg'), data.error, 'danger'); return; }
-    renderFetchedMatches(data.matches || []);
+    if (data.error) { showMsg(msgEl, data.error, 'danger'); return; }
+
+    const matches = data.matches || [];
+    if (!matches.length) { showMsg(msgEl, 'No matches found for selected date(s).', 'warning'); return; }
+
+    const finished = matches.filter(m => m.status === 'FINISHED');
+    const pending  = matches.filter(m => m.status !== 'FINISHED');
+
+    // Auto-save all finished matches
+    let saved = 0, skipped = 0, errors = 0;
+    for (const m of finished) {
+      const result = m.homeScore > m.awayScore ? 'team1' : m.homeScore < m.awayScore ? 'team2' : 'draw';
+      const stage  = m.stage === 'GROUP_STAGE' ? 'Group' : m.stage;
+      const grp    = m.group || '';
+      const date   = m.utcDate ? m.utcDate.split('T')[0] : dateFrom;
+      try {
+        const r    = await apiFetch({ action:'add_match', team1:m.homeTeam, team2:m.awayTeam, stage, group:grp, result, date });
+        const d    = await r.json();
+        if (d.success) saved++;
+        else { skipped++; } // likely duplicate
+      } catch(e) { errors++; }
+    }
+
+    // Show summary
+    renderFetchSummary(saved, skipped, errors, pending);
+    if (saved > 0) loadMatches();
+
   } catch(e) {
     document.getElementById('fetch-loading').classList.add('hidden');
-    showMsg(document.getElementById('fetch-msg'), 'Connection error. Try again.', 'danger');
+    showMsg(msgEl, 'Connection error. Try again.', 'danger');
   }
 }
 
-function renderFetchedMatches(matches) {
+function renderFetchSummary(saved, skipped, errors, pending) {
   const div = document.getElementById('fetch-results');
-  if (matches.length === 0) { div.innerHTML = '<div class="empty-state">No matches scheduled for today.</div>'; return; }
-  div.innerHTML = matches.map(m => {
-    const statusClass = m.status === 'FINISHED' ? 'status-FT' : m.status === 'IN_PLAY' ? 'status-LIVE' : 'status-NS';
-    const statusLabel = m.status === 'FINISHED' ? 'FT' : m.status === 'IN_PLAY' ? 'LIVE' : 'NS';
-    const score = (m.homeScore !== null && m.awayScore !== null) ? `${m.homeScore} – ${m.awayScore}` : 'vs';
-    const result = m.homeScore > m.awayScore ? 'team1' : m.homeScore < m.awayScore ? 'team2' : m.homeScore === m.awayScore && m.homeScore !== null ? 'draw' : '';
-    const grp = m.group || '';
-    const stage = m.stage === 'GROUP_STAGE' ? 'Group' : m.stage;
-    return `
-      <div class="fetch-match">
-        <div class="teams">${esc(m.homeTeam)} <span class="status-badge ${statusClass}">${statusLabel}</span></div>
-        <div class="teams" style="color:var(--muted);font-size:0.75rem">vs ${esc(m.awayTeam)}</div>
-        <div class="score">${score}</div>
-        <div class="meta">Stage: ${stage} ${grp ? '· Group ' + grp : ''}</div>
-        <div class="actions">
-          ${m.status === 'FINISHED' ? `
-            <button class="btn btn-success btn-sm" onclick="confirmFetchedResult('${esc(m.homeTeam)}','${esc(m.awayTeam)}','${result}','${stage}','${grp}')">
-              ✓ Confirm Result
-            </button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="confirmFetchedResult('${esc(m.homeTeam)}','${esc(m.awayTeam)}','team1','${stage}','${grp}')">T1 Win</button>
-          <button class="btn btn-ghost btn-sm" onclick="confirmFetchedResult('${esc(m.homeTeam)}','${esc(m.awayTeam)}','draw','${stage}','${grp}')">Draw</button>
-          <button class="btn btn-ghost btn-sm" onclick="confirmFetchedResult('${esc(m.homeTeam)}','${esc(m.awayTeam)}','team2','${stage}','${grp}')">T2 Win</button>
+  let html = `
+    <div class="card" style="margin-bottom:12px">
+      <h3>Auto-Save Summary</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:${pending.length?'14px':'0'}">
+        <div style="background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:10px 16px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--success)">${saved}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">Saved</div>
         </div>
+        <div style="background:rgba(255,171,64,0.1);border:1px solid rgba(255,171,64,0.3);border-radius:8px;padding:10px 16px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--warning)">${skipped}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">Already Exist</div>
+        </div>
+        ${errors ? `<div style="background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);border-radius:8px;padding:10px 16px;text-align:center">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--danger)">${errors}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">Errors</div>
+        </div>` : ''}
       </div>`;
-  }).join('');
-}
 
-async function confirmFetchedResult(team1, team2, result, stage, group) {
-  if (!result) { showToast('No result to confirm yet.', 'warning'); return; }
-  try {
-    const res  = await apiFetch({ action:'add_match', team1, team2, stage, group, result, date: new Date().toISOString().split('T')[0] });
-    const data = await res.json();
-    if (data.success) { showToast(`✓ ${team1} vs ${team2} saved!`, 'success'); loadMatches(); }
-    else showToast(data.error || 'Error saving.', 'danger');
-  } catch(e) { showToast('Connection error.', 'danger'); }
+  if (pending.length) {
+    html += `<div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--muted);margin-bottom:8px">UPCOMING / NOT YET PLAYED</div>
+      ${pending.map(m => `
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.8rem">
+          <span>${esc(m.homeTeam)} vs ${esc(m.awayTeam)}</span>
+          <span style="color:var(--muted)">${m.utcDate ? new Date(m.utcDate).toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'})+' EAT' : 'TBD'}</span>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  html += '</div>';
+  div.innerHTML = html;
 }
 
 // ---- MATCHES ----
