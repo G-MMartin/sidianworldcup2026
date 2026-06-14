@@ -387,7 +387,8 @@ async function fetchAndSave() {
         const r    = await apiFetch({ action:'add_match', team1:m.homeTeam, team2:m.awayTeam, stage, group:grp, result, date });
         const d    = await r.json();
         if (d.success) saved++;
-        else { skipped++; } // likely duplicate
+        else if (d.duplicate) skipped++;
+        else errors++;
       } catch(e) { errors++; }
     }
 
@@ -454,17 +455,29 @@ async function loadMatches() {
 function renderMatches() {
   const list = document.getElementById('matches-list');
   if (!matchesCache.length) { list.innerHTML = '<div class="empty-state">No matches yet.</div>'; return; }
-  const stages = ['Group','R32','R16','QF','SF','Final'];
+
+  // Group by date, newest first
+  const byDate = {};
+  matchesCache.forEach(m => {
+    const d = m.Date || 'Unknown Date';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(m);
+  });
+
+  const sortedDates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
   let html = '';
-  stages.forEach(stage => {
-    const sm = matchesCache.filter(m => m.Stage === stage);
-    if (!sm.length) return;
-    html += `<div class="section-title">${stageLabel(stage)} (${sm.length})</div>`;
-    sm.forEach(m => {
+
+  sortedDates.forEach(date => {
+    const ms       = byDate[date];
+    const dateLabel = date !== 'Unknown Date'
+      ? new Date(date + 'T12:00:00').toLocaleDateString('en-KE',{weekday:'short',day:'numeric',month:'long',year:'numeric'})
+      : 'Unknown Date';
+    html += `<div class="section-title">📅 ${dateLabel} <span style="color:var(--primary-light);font-weight:800">(${ms.length})</span></div>`;
+    ms.forEach(m => {
       html += `
         <div class="match-item">
           <div class="match-teams">${esc(m.Team1)} vs ${esc(m.Team2)}</div>
-          <div class="match-meta">${m.Date||''} ${m.Group ? '· Grp '+m.Group : ''}</div>
+          <div class="match-meta">${stageLabel(m.Stage)} ${m.Group ? '· Grp '+m.Group : ''}</div>
           <div class="match-actions">
             ${resultBadge(m.Result, m.Team1, m.Team2)}
             <button class="btn btn-warning btn-sm" onclick="openResult('${m.MatchID}')">Edit</button>
