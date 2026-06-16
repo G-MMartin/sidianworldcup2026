@@ -394,6 +394,7 @@
               <th class="num" style="color:var(--success)">W</th>
               <th class="num" style="color:var(--warning)">D</th>
               <th class="num" style="color:var(--danger)">L</th>
+              <th class="num">GD</th>
               <th class="num">Pts</th>
             </tr>
           </thead>
@@ -426,14 +427,22 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbyO0bUHn03KKOAcAni4OJLDIIncAODvl6Qj5xlIK9ryQcij4jPpjhMwhA8Vhieu-m5z/exec';
 
 const CAT_MAP = {
-  'Argentina':1,'France':1,'Spain':1,'England':1,'Brazil':1,'Portugal':1,
-  'Belgium':1,'Netherlands':1,'Germany':1,'Uruguay':1,'Colombia':1,'USA':1,
-  'Mexico':2,'Japan':2,'Morocco':2,'Switzerland':2,'Senegal':2,'Korea Republic':2,
-  'Ecuador':2,'Canada':2,'Croatia':2,'Australia':2,'Norway':2,'Ghana':2,'Sweden':2,
-  "Algeria":3,"Austria":3,"Côte d'Ivoire":3,"Tunisia":3,"Qatar":3,"Saudi Arabia":3,
-  "Egypt":3,"IR Iran":3,"Paraguay":3,"South Africa":3,"Panama":3,"Uzbekistan":3,
-  "Czechia":3,"Bosnia and Herzegovina":3,"Türkiye":3,"Congo DR":3,
-  "Scotland":4,"New Zealand":4,"Jordan":4,"Curaçao":4,"Cabo Verde":4,"Haiti":4,"Iraq":4
+  // CAT 1 — Rank 1-13
+  "Argentina":1,"Spain":1,"France":1,"England":1,"Portugal":1,
+  "Brazil":1,"Morocco":1,"Netherlands":1,"Belgium":1,"Germany":1,
+  "Croatia":1,"Colombia":1,
+  // CAT 2 — Rank 14-27
+  "Mexico":2,"Senegal":2,"Uruguay":2,"USA":2,"Japan":2,
+  "Switzerland":2,"IR Iran":2,"Turkiye":2,"Ecuador":2,"Austria":2,
+  "Korea Republic":2,"Australia":2,
+  // CAT 3 — Rank 28-46
+  "Algeria":3,"Egypt":3,"Canada":3,"Norway":3,"Cote dIvoire":3,
+  "Panama":3,"Sweden":3,"Czechia":3,"Paraguay":3,"Scotland":3,
+  "Tunisia":3,"Congo DR":3,
+  // CAT 4 — Rank 47+
+  "Uzbekistan":4,"Qatar":4,"Iraq":4,"South Africa":4,"Saudi Arabia":4,
+  "Jordan":4,"Bosnia and Herzegovina":4,"Cabo Verde":4,"Ghana":4,
+  "Haiti":4,"Curacaо":4,"New Zealand":4
 };
 
 const GROUP_KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
@@ -563,33 +572,29 @@ function renderTournament(data) {
     recentDiv.innerHTML = '<div class="no-tournament">No matches played yet.</div>';
   } else {
     recentDiv.innerHTML = matches.map(m => {
-      // Use result field — not score numbers
-      const homeWin  = m.result === 'team1';
-      const awayWin  = m.result === 'team2';
-      const isDraw   = m.result === 'draw';
-      const scoreLabel = homeWin ? 'W – L' : awayWin ? 'L – W' : isDraw ? 'D – D' : 'vs';
-      const scoreColor = 'color:var(--warning)';
-      let dateStr = '';
-      if (m.date) {
-        try {
-          const parts = m.date.split('-');
-          if (parts.length === 3) {
-            const dt = new Date(Number(parts[0]), Number(parts[1])-1, Number(parts[2]));
-            dateStr = dt.toLocaleDateString('en-KE',{day:'numeric',month:'short',year:'numeric'});
-          }
-        } catch(e) {}
-      }
-      return `
-        <div class="result-card">
-          <div class="rc-stage">${esc(m.stage||'')}${m.group ? ' · Group '+m.group : ''}</div>
-          <div class="rc-match">
-            <div class="rc-team" style="${homeWin?'color:var(--success)':awayWin?'opacity:0.45':''}">${esc(m.homeTeam||'')}</div>
-            <div class="rc-score" style="${scoreColor}">${scoreLabel}</div>
-            <div class="rc-team right" style="${awayWin?'color:var(--success)':homeWin?'opacity:0.45':''}">${esc(m.awayTeam||'')}</div>
-          </div>
-          ${dateStr ? `<div class="rc-date">${dateStr}</div>` : ''}
-        </div>`;
-    }).join('');
+        const hasScore = m.homeScore !== null && m.awayScore !== null;
+        const homeWin  = hasScore ? m.homeScore > m.awayScore : m.result === 'team1';
+        const awayWin  = hasScore ? m.awayScore > m.homeScore : m.result === 'team2';
+        const scoreStr = hasScore ? `${m.homeScore} – ${m.awayScore}` : (m.result === 'draw' ? 'D – D' : m.result === 'team1' ? 'W – L' : m.result === 'team2' ? 'L – W' : 'vs');
+        const scoreColor = (!homeWin && !awayWin) ? 'var(--warning)' : 'var(--success)';
+        let dateStr = '';
+        if (m.date) {
+          try {
+            const [y,mo,d] = m.date.split('-').map(Number);
+            dateStr = new Date(y,mo-1,d).toLocaleDateString('en-KE',{day:'numeric',month:'short'});
+          } catch(e){}
+        }
+        return `
+          <div class="result-card">
+            <div class="rc-stage">${esc(m.stage)}${m.group ? ' · Group ' + m.group : ''}</div>
+            <div class="rc-match">
+              <div class="rc-team" style="${homeWin?'color:var(--success)':awayWin?'opacity:0.45':''}">${esc(m.homeTeam)}</div>
+              <div class="rc-score" style="color:${scoreColor}">${scoreStr}</div>
+              <div class="rc-team right" style="${awayWin?'color:var(--success)':homeWin?'opacity:0.45':''}">${esc(m.awayTeam)}</div>
+            </div>
+            <div class="rc-date">${dateStr}</div>
+          </div>`;
+      }).join('');
   }
 
   // ---- Overall standings ----
@@ -602,6 +607,7 @@ function renderTournament(data) {
   tbody.innerHTML = standings.map((row, idx) => {
     const pos      = idx + 1;
     const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
+    const gdColor = (row.goalDiff||0) > 0 ? 'color:var(--success)' : (row.goalDiff||0) < 0 ? 'color:var(--danger)' : '';
     return `<tr>
       <td><span class="pos-badge ${posClass}">${pos}</span></td>
       <td style="font-weight:600;font-size:0.78rem">${esc(row.team||'')}</td>
@@ -610,6 +616,7 @@ function renderTournament(data) {
       <td class="num" style="color:var(--success)">${row.won||0}</td>
       <td class="num" style="color:var(--warning)">${row.draw||0}</td>
       <td class="num" style="color:var(--danger)">${row.lost||0}</td>
+      <td class="num" style="${gdColor}">${(row.goalDiff||0) > 0 ? '+' : ''}${row.goalDiff||0}</td>
       <td class="pts">${row.points||0}</td>
     </tr>`;
   }).join('');
