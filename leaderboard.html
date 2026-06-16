@@ -389,7 +389,6 @@
             <tr>
               <th style="width:28px">#</th>
               <th>Team</th>
-              <th class="num">Grp</th>
               <th class="num">P</th>
               <th class="num" style="color:var(--success)">W</th>
               <th class="num" style="color:var(--warning)">D</th>
@@ -611,7 +610,6 @@ function renderTournament(data) {
     return `<tr>
       <td><span class="pos-badge ${posClass}">${pos}</span></td>
       <td style="font-weight:600;font-size:0.78rem">${esc(row.team||'')}</td>
-      <td class="num"><span class="grp-badge">${esc(row.group||'')}</span></td>
       <td class="num">${row.played||0}</td>
       <td class="num" style="color:var(--success)">${row.won||0}</td>
       <td class="num" style="color:var(--warning)">${row.draw||0}</td>
