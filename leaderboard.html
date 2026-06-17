@@ -272,6 +272,11 @@
     .view-toggle-btn { flex:1; padding:10px 12px; border-radius:10px; font-size:0.82rem; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); text-align:center; transition:all 0.2s; }
     .view-toggle-btn.active { background:var(--primary); border-color:var(--primary-light); color:#fff; }
     .view-toggle-count { font-size:0.68rem; opacity:0.75; margin-left:4px; }
+
+    /* Sex sub-toggle (All / Male / Female) — shown only under Individuals */
+    .sex-toggle { display:flex; gap:6px; margin-bottom:14px; }
+    .sex-toggle-btn { flex:1; padding:7px 10px; border-radius:8px; font-size:0.74rem; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); text-align:center; transition:all 0.2s; }
+    .sex-toggle-btn.active { background:var(--primary-dark); border-color:var(--primary-light); color:#fff; }
     /* ===== TABS ===== */
     .lb-tabs { display:flex; background:var(--surface); border-bottom:1px solid var(--border); }
     .lb-tab-btn { flex:1; padding:12px 8px; background:none; border:none; color:var(--muted); font-size:0.78rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
@@ -361,6 +366,11 @@
       <div class="view-toggle-btn active" onclick="setStandingsView('individual',this)">👤 Individuals <span class="view-toggle-count" id="count-individual"></span></div>
       <div class="view-toggle-btn" onclick="setStandingsView('department',this)">🏢 Departments <span class="view-toggle-count" id="count-department"></span></div>
     </div>
+    <div class="sex-toggle" id="standings-sex-toggle">
+      <div class="sex-toggle-btn active" onclick="setStandingsSexFilter('all',this)">All</div>
+      <div class="sex-toggle-btn" onclick="setStandingsSexFilter('Male',this)">Male</div>
+      <div class="sex-toggle-btn" onclick="setStandingsSexFilter('Female',this)">Female</div>
+    </div>
     <div class="bonus-legend">
       <h3>🎯 Scoring Guide</h3>
       <div class="bonus-items">
@@ -421,6 +431,11 @@
       <div class="view-toggle-btn active" onclick="setStatsView('individual',this)">👤 Individuals</div>
       <div class="view-toggle-btn" onclick="setStatsView('department',this)">🏢 Departments</div>
     </div>
+    <div class="sex-toggle" id="stats-sex-toggle">
+      <div class="sex-toggle-btn active" onclick="setStatsSexFilter('all',this)">All</div>
+      <div class="sex-toggle-btn" onclick="setStatsSexFilter('Male',this)">Male</div>
+      <div class="sex-toggle-btn" onclick="setStatsSexFilter('Female',this)">Female</div>
+    </div>
     <div id="stats-loading" class="stats-loading"><div class="loading-spinner"></div><div>Loading stats...</div></div>
     <div id="stats-content" class="hidden"></div>
   </div>
@@ -476,6 +491,7 @@ function switchTab(tab, btn) {
 // ---- STANDINGS ----
 let fullLeaderboard  = [];
 let standingsView    = 'individual';
+let standingsSex     = 'all';
 
 async function loadLeaderboard() {
   document.getElementById('loading').classList.remove('hidden');
@@ -497,6 +513,16 @@ function setStandingsView(view, btn) {
   standingsView = view;
   document.querySelectorAll('#standings-toggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // Sex sub-toggle only relevant for Individuals
+  document.getElementById('standings-sex-toggle').style.display = view === 'individual' ? 'flex' : 'none';
+  if (view !== 'individual') standingsSex = 'all';
+  renderLeaderboard({ leaderboard: fullLeaderboard, lastUpdated: lastLbUpdate });
+}
+
+function setStandingsSexFilter(sex, btn) {
+  standingsSex = sex;
+  document.querySelectorAll('#standings-sex-toggle .sex-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
   renderLeaderboard({ leaderboard: fullLeaderboard, lastUpdated: lastLbUpdate });
 }
 
@@ -507,11 +533,16 @@ function renderLeaderboard(data) {
   if (data.lastUpdated) lastLbUpdate = data.lastUpdated;
 
   const allLb = data.leaderboard || fullLeaderboard;
-  const individuals = allLb.filter(p => p.sex === 'Male' || p.sex === 'Female');
+  let individuals = allLb.filter(p => p.sex === 'Male' || p.sex === 'Female');
   const departments = allLb.filter(p => p.sex === 'Department');
 
   document.getElementById('count-individual').textContent = individuals.length ? `(${individuals.length})` : '';
   document.getElementById('count-department').textContent = departments.length ? `(${departments.length})` : '';
+
+  // Apply Male/Female sub-filter within Individuals
+  if (standingsView === 'individual' && standingsSex !== 'all') {
+    individuals = individuals.filter(p => p.sex === standingsSex);
+  }
 
   const lb = standingsView === 'department' ? departments : individuals;
 
@@ -668,6 +699,7 @@ function renderTournament(data) {
 // ---- STATS ----
 let fullStatsData = null;
 let statsView      = 'individual';
+let statsSex       = 'all';
 
 async function loadStats() {
   document.getElementById('stats-loading').classList.remove('hidden');
@@ -686,6 +718,15 @@ function setStatsView(view, btn) {
   statsView = view;
   document.querySelectorAll('#stats-toggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  document.getElementById('stats-sex-toggle').style.display = view === 'individual' ? 'flex' : 'none';
+  if (view !== 'individual') statsSex = 'all';
+  if (fullStatsData) renderStats(fullStatsData);
+}
+
+function setStatsSexFilter(sex, btn) {
+  statsSex = sex;
+  document.querySelectorAll('#stats-sex-toggle .sex-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
   if (fullStatsData) renderStats(fullStatsData);
 }
 
@@ -698,9 +739,14 @@ function renderStats(data) {
   div.classList.remove('hidden');
 
   const allPs = data.playerStats || [];
-  const ps = statsView === 'department'
+  let ps = statsView === 'department'
     ? allPs.filter(p => p.sex === 'Department')
     : allPs.filter(p => p.sex === 'Male' || p.sex === 'Female');
+
+  // Apply Male/Female sub-filter within Individuals
+  if (statsView === 'individual' && statsSex !== 'all') {
+    ps = ps.filter(p => p.sex === statsSex);
+  }
 
   const mp = data.mostPicked  || [];
   statsData = ps; // store for modal use
