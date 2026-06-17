@@ -266,6 +266,12 @@
     .psr-tag.upset { background:rgba(107,197,255,0.1);color:#6bc5ff;        border-color:rgba(107,197,255,0.3); }
     .psr-tag.bonus { background:rgba(255,171,64,0.1); color:var(--warning); border-color:rgba(255,171,64,0.3); }
     .hidden { display: none !important; }
+
+    /* ===== INDIVIDUAL / DEPARTMENT SUB-TOGGLE ===== */
+    .view-toggle { display:flex; gap:8px; margin-bottom:14px; }
+    .view-toggle-btn { flex:1; padding:10px 12px; border-radius:10px; font-size:0.82rem; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); text-align:center; transition:all 0.2s; }
+    .view-toggle-btn.active { background:var(--primary); border-color:var(--primary-light); color:#fff; }
+    .view-toggle-count { font-size:0.68rem; opacity:0.75; margin-left:4px; }
     /* ===== TABS ===== */
     .lb-tabs { display:flex; background:var(--surface); border-bottom:1px solid var(--border); }
     .lb-tab-btn { flex:1; padding:12px 8px; background:none; border:none; color:var(--muted); font-size:0.78rem; font-weight:700; cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; }
@@ -351,6 +357,10 @@
 <!-- ===== STANDINGS TAB ===== -->
 <div id="tab-standings" class="lb-tab-content active">
   <div class="container">
+    <div class="view-toggle" id="standings-toggle">
+      <div class="view-toggle-btn active" onclick="setStandingsView('individual',this)">👤 Individuals <span class="view-toggle-count" id="count-individual"></span></div>
+      <div class="view-toggle-btn" onclick="setStandingsView('department',this)">🏢 Departments <span class="view-toggle-count" id="count-department"></span></div>
+    </div>
     <div class="bonus-legend">
       <h3>🎯 Scoring Guide</h3>
       <div class="bonus-items">
@@ -407,6 +417,10 @@
 <!-- ===== STATS TAB ===== -->
 <div id="tab-stats" class="lb-tab-content">
   <div class="stats-wrap">
+    <div class="view-toggle" id="stats-toggle">
+      <div class="view-toggle-btn active" onclick="setStatsView('individual',this)">👤 Individuals</div>
+      <div class="view-toggle-btn" onclick="setStatsView('department',this)">🏢 Departments</div>
+    </div>
     <div id="stats-loading" class="stats-loading"><div class="loading-spinner"></div><div>Loading stats...</div></div>
     <div id="stats-content" class="hidden"></div>
   </div>
@@ -460,6 +474,9 @@ function switchTab(tab, btn) {
 }
 
 // ---- STANDINGS ----
+let fullLeaderboard  = [];
+let standingsView    = 'individual';
+
 async function loadLeaderboard() {
   document.getElementById('loading').classList.remove('hidden');
   document.getElementById('leaderboard-list').innerHTML = '';
@@ -468,22 +485,48 @@ async function loadLeaderboard() {
   try {
     const res  = await fetch(API_URL + '?action=leaderboard');
     const data = await res.json();
-    picksData  = data.leaderboard || [];
+    fullLeaderboard = data.leaderboard || [];
+    picksData = fullLeaderboard;
     renderLeaderboard(data);
   } catch(e) {
     document.getElementById('loading').innerHTML = '<div style="color:var(--danger)">⚠️ Could not load data.</div>';
   }
 }
 
+function setStandingsView(view, btn) {
+  standingsView = view;
+  document.querySelectorAll('#standings-toggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeaderboard({ leaderboard: fullLeaderboard, lastUpdated: lastLbUpdate });
+}
+
+let lastLbUpdate = null;
+
 function renderLeaderboard(data) {
   document.getElementById('loading').classList.add('hidden');
-  const lb = data.leaderboard || [];
-  document.getElementById('stat-players').textContent = lb.length;
-  if (data.lastUpdated) {
-    const d = new Date(data.lastUpdated);
+  if (data.lastUpdated) lastLbUpdate = data.lastUpdated;
+
+  const allLb = data.leaderboard || fullLeaderboard;
+  const individuals = allLb.filter(p => p.sex === 'Male' || p.sex === 'Female');
+  const departments = allLb.filter(p => p.sex === 'Department');
+
+  document.getElementById('count-individual').textContent = individuals.length ? `(${individuals.length})` : '';
+  document.getElementById('count-department').textContent = departments.length ? `(${departments.length})` : '';
+
+  const lb = standingsView === 'department' ? departments : individuals;
+
+  document.getElementById('stat-players').textContent = allLb.length;
+  if (lastLbUpdate) {
+    const d = new Date(lastLbUpdate);
     document.getElementById('stat-updated').textContent = d.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
   }
-  if (lb.length === 0) { document.getElementById('empty').classList.remove('hidden'); return; }
+  if (lb.length === 0) {
+    document.getElementById('empty').classList.remove('hidden');
+    document.getElementById('podium').classList.add('hidden');
+    document.getElementById('leaderboard-list').innerHTML = '';
+    return;
+  }
+  document.getElementById('empty').classList.add('hidden');
 
   // Podium
   if (lb.length >= 2) {
@@ -496,6 +539,8 @@ function renderLeaderboard(data) {
       const m = medals[i];
       return `<div class="podium-item ${m.cls}"><div class="podium-crown">${m.crown}</div><div class="podium-name">${esc(lb[i].name)}</div><div class="podium-pts">${lb[i].total} pts</div><div class="podium-block">${m.icon}</div></div>`;
     }).join('');
+  } else {
+    document.getElementById('podium').classList.add('hidden');
   }
 
   const list = document.getElementById('leaderboard-list');
@@ -621,16 +666,27 @@ function renderTournament(data) {
 }
 
 // ---- STATS ----
+let fullStatsData = null;
+let statsView      = 'individual';
+
 async function loadStats() {
   document.getElementById('stats-loading').classList.remove('hidden');
   document.getElementById('stats-content').classList.add('hidden');
   try {
     const res  = await fetch(API_URL + '?action=get_stats');
     const data = await res.json();
+    fullStatsData = data;
     renderStats(data);
   } catch(e) {
     document.getElementById('stats-loading').innerHTML = '<div style="color:var(--danger)">⚠️ Could not load stats.</div>';
   }
+}
+
+function setStatsView(view, btn) {
+  statsView = view;
+  document.querySelectorAll('#stats-toggle .view-toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (fullStatsData) renderStats(fullStatsData);
 }
 
 // Store stats data globally for modal access
@@ -641,7 +697,11 @@ function renderStats(data) {
   const div = document.getElementById('stats-content');
   div.classList.remove('hidden');
 
-  const ps = data.playerStats || [];
+  const allPs = data.playerStats || [];
+  const ps = statsView === 'department'
+    ? allPs.filter(p => p.sex === 'Department')
+    : allPs.filter(p => p.sex === 'Male' || p.sex === 'Female');
+
   const mp = data.mostPicked  || [];
   statsData = ps; // store for modal use
 
@@ -655,8 +715,8 @@ function renderStats(data) {
         <div class="sc-label">Matches Played</div>
       </div>
       <div class="stat-card">
-        <div class="sc-val">${data.totalPlayers||0}</div>
-        <div class="sc-label">Players</div>
+        <div class="sc-val">${ps.length}</div>
+        <div class="sc-label">${statsView === 'department' ? 'Departments' : 'Players'}</div>
       </div>
       <div class="stat-card">
         <div class="sc-val">${leader ? leader.total : '—'}</div>
@@ -669,10 +729,10 @@ function renderStats(data) {
         <div class="sc-name">${topUpset ? esc(topUpset.name) : ''}</div>
       </div>
     </div>
-    <div class="section-hdr">Player Breakdown <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· tap a tag to see matches</span></div>`;
+    <div class="section-hdr">${statsView === 'department' ? 'Department' : 'Player'} Breakdown <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· tap a tag to see matches</span></div>`;
 
   if (!ps.length) {
-    html += '<div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem">No data yet.</div>';
+    html += `<div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem">No ${statsView === 'department' ? 'department' : 'player'} data yet.</div>`;
   } else {
     html += ps.map((p, i) => {
       const won   = (p.wonMatches   || []).length;
@@ -698,7 +758,7 @@ function renderStats(data) {
   }
 
   if (mp.length) {
-    html += `<div class="section-hdr" style="margin-top:20px">Most Picked Teams</div><div class="most-picked">`;
+    html += `<div class="section-hdr" style="margin-top:20px">Most Picked Teams <span style="font-size:0.65rem;color:var(--muted);font-weight:400">· across all entries</span></div><div class="most-picked">`;
     html += mp.map(m => `
       <div class="mp-item">
         <div class="mp-team">${esc(m.team)}</div>
