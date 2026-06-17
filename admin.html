@@ -708,7 +708,7 @@ function renderPlayers(players) {
     <div class="player-row">
       <div class="player-num">${i+1}</div>
       <div class="player-name">${esc(p.Name)}</div>
-      <div class="player-id">****${esc(p.Email)}</div>
+      <div class="player-id">${esc(p.Email)}${p.Sex ? ' · ' + esc(p.Sex) : ''}</div>
     </div>`).join('');
 }
 

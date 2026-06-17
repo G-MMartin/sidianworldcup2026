@@ -264,20 +264,32 @@
   <div id="closed-screen" class="card closed-screen hidden">
     <div class="icon">🔒</div>
     <h2>Registration Closed</h2>
-    <p style="color:var(--muted)">The deadline (12 June 2026) has passed.<br>Check the leaderboard to follow the action.</p>
+    <p style="color:var(--muted)">The deadline (17 June 2026) has passed.<br>Check the leaderboard to follow the action.</p>
   </div>
 
   <!-- STEP 1: Personal Details -->
   <div id="step1" class="card">
     <h2>Your Details</h2>
-    <p class="subtitle">Enter your name and last 4 phone digits to get started</p>
+    <p class="subtitle">Enter your name, Staff ID and details to get started</p>
     <div class="field">
       <label>Full Name</label>
       <input type="text" id="inp-name" placeholder="e.g. John Mwangi" autocomplete="name">
     </div>
     <div class="field">
-      <label>Last 4 Digits of Your Phone</label>
-      <input type="text" id="inp-email" placeholder="e.g. 7823" maxlength="4" inputmode="numeric" autocomplete="off">
+      <label>Staff ID</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-weight:700;color:var(--primary-light);text-align:center;min-width:54px">KB</div>
+        <input type="text" id="inp-email" placeholder="1234" maxlength="4" inputmode="numeric" autocomplete="off" style="flex:1">
+      </div>
+    </div>
+    <div class="field">
+      <label>Sex</label>
+      <select id="inp-sex">
+        <option value="">— Select —</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Department">Department</option>
+      </select>
     </div>
     <div id="step1-error" class="alert alert-danger hidden"></div>
     <button class="btn btn-primary" onclick="goStep2()">Next — Pick My Teams →</button>
@@ -307,6 +319,7 @@
       <span style="color:var(--muted);font-size:0.8rem">Registering as:</span><br>
       <span id="review-name" style="font-weight:700;font-size:1rem"></span>
       <span id="review-email" style="color:var(--muted);font-size:0.83rem;margin-left:8px"></span>
+      <br><span id="review-sex" style="color:var(--muted);font-size:0.83rem"></span>
     </div>
     <table class="review-table" id="review-table"></table>
     <div id="step3-error" class="alert alert-danger hidden" style="margin-top:14px"></div>
@@ -355,6 +368,7 @@ const GROUP_KEYS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
 let playerName  = '';
 let playerEmail = '';
+let playerSex   = '';
 let picks = {};
 
 // ---- INIT ----
@@ -412,12 +426,16 @@ function goStep1() {
 }
 
 function goStep2() {
-  playerName  = document.getElementById('inp-name').value.trim();
-  playerEmail = document.getElementById('inp-email').value.trim();
-  const err   = document.getElementById('step1-error');
+  playerName = document.getElementById('inp-name').value.trim();
+  const digits = document.getElementById('inp-email').value.trim();
+  playerSex  = document.getElementById('inp-sex').value;
+  const err  = document.getElementById('step1-error');
 
   if (!playerName) { showErr(err, 'Please enter your name.'); return; }
-  if (!/^\d{4}$/.test(playerEmail)) { showErr(err, 'Please enter exactly 4 digits of your phone number.'); return; }
+  if (!/^\d{4}$/.test(digits)) { showErr(err, 'Please enter exactly 4 digits for your Staff ID.'); return; }
+  if (!playerSex) { showErr(err, 'Please make a selection.'); return; }
+
+  playerEmail = 'KB' + digits;
   err.classList.add('hidden');
   setStep(2);
 }
@@ -438,6 +456,7 @@ function goStep3() {
 function buildReview() {
   document.getElementById('review-name').textContent  = playerName;
   document.getElementById('review-email').textContent = playerEmail;
+  document.getElementById('review-sex').textContent   = playerSex;
   const tbody = document.getElementById('review-table');
   tbody.innerHTML = '';
   GROUP_KEYS.forEach(g => {
@@ -477,7 +496,7 @@ async function submitRegistration() {
   try {
     const res = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ action:'register', name:playerName, email:playerEmail, picks })
+      body: JSON.stringify({ action:'register', name:playerName, email:playerEmail, sex:playerSex, picks })
     });
     const data = await res.json();
     if (data.success) {
