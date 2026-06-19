@@ -356,6 +356,10 @@
     .player-stat-row { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:6px; }
     .psr-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .psr-name { font-weight:700; font-size:0.88rem; }
+    .psr-gd { display:inline-block; font-size:0.62rem; font-weight:700; padding:1px 7px; border-radius:10px; margin-top:3px; }
+    .psr-gd.gd-pos { background:rgba(76,175,80,0.15); color:var(--success); }
+    .psr-gd.gd-neg { background:rgba(255,82,82,0.15); color:var(--danger); }
+    .psr-gd.gd-zero { background:rgba(154,154,154,0.15); color:var(--muted); }
     .psr-total { font-size:1rem; font-weight:800; color:var(--primary-light); }
     .psr-bars { display:flex; gap:6px; flex-wrap:wrap; }
     .psr-bar { font-size:0.68rem; padding:3px 8px; border-radius:4px; font-weight:600; }
@@ -911,10 +915,16 @@ function renderStats(data) {
       const lost  = (p.lostMatches  || []).length;
       const upset = (p.upsetMatches || []).length;
       const bonus = p.bonusPoints || 0;
+      const gd    = p.gdSum || 0;
+      const gdCls = gd > 0 ? 'gd-pos' : gd < 0 ? 'gd-neg' : 'gd-zero';
+      const gdTxt = gd > 0 ? `+${gd} GD` : `${gd} GD`;
       return `
         <div class="player-stat-row" data-name="${esc(p.name).toLowerCase()}">
           <div class="psr-top">
-            <div class="psr-name">${i+1}. ${esc(p.name)}</div>
+            <div>
+              <div class="psr-name">${i+1}. ${esc(p.name)}</div>
+              <span class="psr-gd ${gdCls}">${gdTxt}</span>
+            </div>
             <div class="psr-total">${p.total} pts</div>
           </div>
           <div class="psr-bars" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
