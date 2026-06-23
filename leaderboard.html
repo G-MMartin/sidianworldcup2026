@@ -955,9 +955,9 @@ function renderStats(data) {
           </div>
           <div class="psr-bars" style="margin-top:6px">
             <span class="psr-tag won"   onclick="openMatchModal(${i},'won')"   >✅ ${won} Won</span>
-            <span class="psr-tag draw"  onclick="openMatchModal(${i},'drawn')" >➖ ${drawn} Draw</span>
-            <span class="psr-tag lost"  onclick="openMatchModal(${i},'lost')"  >❌ ${lost} Lost</span>
-            <span class="psr-tag upset" onclick="openMatchModal(${i},'upset')" >⚡ ${upset} Upset</span>
+            <span class="psr-tag draw"  onclick="openMatchModal(${i},'drawn')" >${drawn} Draw</span>
+            <span class="psr-tag lost"  onclick="openMatchModal(${i},'lost')"  >${lost} Lost</span>
+            <span class="psr-tag upset" onclick="openMatchModal(${i},'upset')" >${upset} Upset</span>
             ${bonus > 0 ? `<span class="psr-tag bonus" onclick="openMatchModal(${i},'bonus')">🎁 +${bonus} Bonus</span>` : ''}
           </div>
         </div>`;
