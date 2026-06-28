@@ -1125,6 +1125,21 @@ const MATCH_FEEDERS = {
 // for the later rounds (these are fully fixed and never reorder).
 const STAGE_MATCH_START = { R16:89, QF:97, SF:101, '3rd':103, Final:104 };
 
+// Explicit vertical order of matches within each column, by FIFA
+// M-number, so that the two matches feeding a given next-round match
+// always sit adjacent — making the column read like the bracket tree.
+// R32 order is dictated by the feeder map (M74 above M77 because their
+// winners meet in M89, etc.). Later rounds are already in tree order
+// when listed by ascending M-number.
+const STAGE_DISPLAY_ORDER = {
+  R32:   [74,77, 73,75, 76,78, 79,80, 83,84, 81,82, 86,88, 85,87],
+  R16:   [89,90,91,92,93,94,95,96],
+  QF:    [97,98,99,100],
+  SF:    [101,102],
+  '3rd': [103],
+  Final: [104]
+};
+
 // Resolve the FIFA M-number for any bracket row.
 function resolveMatchNumber(m) {
   if (m.Stage === 'R32') {
@@ -1183,7 +1198,23 @@ function renderKnockoutBracket() {
   // Columns, left to right, only for stages with data
   const colsDiv = document.getElementById('bracket-columns');
   colsDiv.innerHTML = BRACKET_STAGE_ORDER.map(stage => {
-    const matches = bracketDataFull.filter(b => b.Stage === stage).sort((a,b) => Number(a.Position||0) - Number(b.Position||0));
+    let matches = bracketDataFull.filter(b => b.Stage === stage);
+    const order = STAGE_DISPLAY_ORDER[stage];
+    if (order) {
+      // Sort by the bracket-tree order (by resolved M-number), so feeders
+      // sit adjacent. Unknown M-numbers fall to the end, keeping position order.
+      matches = matches.slice().sort((a,b) => {
+        const ma = resolveMatchNumber(a), mb = resolveMatchNumber(b);
+        const ia = ma ? order.indexOf(ma) : -1;
+        const ib = mb ? order.indexOf(mb) : -1;
+        const sa = ia === -1 ? 999 : ia;
+        const sb = ib === -1 ? 999 : ib;
+        if (sa !== sb) return sa - sb;
+        return Number(a.Position||0) - Number(b.Position||0);
+      });
+    } else {
+      matches = matches.slice().sort((a,b) => Number(a.Position||0) - Number(b.Position||0));
+    }
     if (!matches.length) return '';
     return `
       <div class="bracket-col" id="bracket-col-${stage}">
