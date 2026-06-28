@@ -243,6 +243,8 @@
         <summary style="font-size:0.74rem;color:var(--muted);cursor:pointer">🔍 Not finding matches? Check the exact stage name the API uses</summary>
         <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="discoverStages()">Discover Available Stages</button>
         <div id="discover-result" style="margin-top:8px;font-size:0.72rem;color:var(--muted)"></div>
+        <button class="btn btn-ghost btn-full" style="margin-top:8px" onclick="checkBracketCompleteness()">Check Our Bracket Completeness</button>
+        <div id="completeness-result" style="margin-top:8px;font-size:0.72rem;color:var(--muted)"></div>
       </details>
     </div>
 
@@ -643,7 +645,11 @@ async function fetchBracketFromAPI() {
     const data = await res.json();
     if (data.success) {
       if (data.count > 0) {
-        showMsg(msgEl, `✓ ${data.count} match(es) auto-filled for ${autoFetchStage}.`, 'success');
+        let msg = `✓ ${data.count} match(es) auto-filled for ${autoFetchStage}.`;
+        if (data.bonusMessages && data.bonusMessages.length) {
+          msg += ' Results & bonuses auto-detected: ' + data.bonusMessages.join(' ');
+        }
+        showMsg(msgEl, msg, 'success');
         loadBracket();
       } else {
         showMsg(msgEl, data.message || 'No matches found for this stage yet.', 'warning');
@@ -670,6 +676,24 @@ async function discoverStages() {
       }
     } else {
       resultEl.textContent = data.error || 'Could not check stages.';
+    }
+  } catch(e) { resultEl.textContent = 'Connection error.'; }
+}
+
+async function checkBracketCompleteness() {
+  const resultEl = document.getElementById('completeness-result');
+  resultEl.textContent = 'Checking our Bracket sheet...';
+  try {
+    const res  = await apiFetch({ action:'check_bracket_completeness' });
+    const data = await res.json();
+    if (data.success) {
+      resultEl.innerHTML = data.report.map(r => {
+        const icon = r.complete ? '✅' : (r.have > 0 ? '⚠️' : '⬜');
+        const color = r.complete ? 'var(--success)' : (r.have > 0 ? 'var(--warning)' : 'var(--muted)');
+        return `<div style="color:${color}">${icon} <strong>${r.stage}</strong>: ${r.have} / ${r.expected} matches</div>`;
+      }).join('');
+    } else {
+      resultEl.textContent = data.error || 'Could not check completeness.';
     }
   } catch(e) { resultEl.textContent = 'Connection error.'; }
 }
@@ -737,7 +761,14 @@ async function saveBracketResult(bracketId, result) {
   try {
     const res  = await apiFetch({ action:'update_bracket', bracketId, result });
     const data = await res.json();
-    if (data.success) { showToast(`Winner: ${data.winner} ✓`,'success'); loadBracket(); }
+    if (data.success) {
+      let msg = `Winner: ${data.winner} ✓`;
+      if (data.bonusMessages && data.bonusMessages.length) {
+        msg += ' — ' + data.bonusMessages.join(' ');
+      }
+      showToast(msg, 'success');
+      loadBracket();
+    }
     else showToast(data.error||'Error.','danger');
   } catch(e) { showToast('Error.','danger'); }
 }
