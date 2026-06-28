@@ -347,6 +347,16 @@
     .upcoming-row .ur-team.right { text-align:right; }
     .upcoming-row .ur-vs { font-size:0.68rem; color:var(--muted); flex-shrink:0; padding:0 4px; }
     .upcoming-row .ur-time { font-size:0.6rem; color:var(--primary-light); width:38px; flex-shrink:0; text-align:right; }
+
+    /* ===== KNOCKOUT BRACKET TAB ===== */
+    .bracket-col { flex-shrink:0; width:240px; }
+    .bracket-col-title { font-size:0.74rem; font-weight:800; color:var(--primary-light); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; text-align:center; padding-bottom:6px; border-bottom:2px solid var(--primary); }
+    .bracket-match-row { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:8px; }
+    .bracket-match-row .bmr-num { font-size:0.6rem; color:var(--muted); margin-bottom:4px; }
+    .bracket-match-row .bmr-team { font-size:0.78rem; font-weight:700; padding:2px 0; }
+    .bracket-match-row .bmr-team.winner { color:var(--success); }
+    .bracket-match-row .bmr-team.loser { opacity:0.45; text-decoration:line-through; color:var(--muted); }
+    .bracket-match-row .bmr-date { font-size:0.6rem; color:var(--muted); margin-top:4px; text-align:right; }
     .show-more-btn { text-align:center; font-size:0.7rem; font-weight:700; color:var(--primary-light); padding:8px; cursor:pointer; user-select:none; border-radius:8px; background:var(--surface); border:1px solid var(--border); margin-top:2px; }
     .show-more-btn:hover { background:var(--card); }
 
@@ -416,6 +426,7 @@
 <div class="lb-tabs">
   <button class="lb-tab-btn active" onclick="switchTab('standings',this)">🏅 Standings</button>
   <button class="lb-tab-btn" onclick="switchTab('bracket',this)">📊 Tournament</button>
+  <button class="lb-tab-btn" onclick="switchTab('knockout',this)">🏆 Bracket</button>
   <button class="lb-tab-btn" onclick="switchTab('stats',this)">📊 Stats</button>
 </div>
 
@@ -510,6 +521,18 @@
   </div>
 </div>
 
+<!-- ===== KNOCKOUT BRACKET TAB ===== -->
+<div id="tab-knockout" class="lb-tab-content">
+  <div class="container">
+    <div class="view-toggle" id="bracket-stage-pills"></div>
+    <div id="bracket-loading" class="loading"><div class="loading-spinner"></div><div>Loading bracket...</div></div>
+    <div id="bracket-empty" class="empty hidden">No knockout bracket data yet — check back once the group stage wraps up.</div>
+    <div id="bracket-scroll-wrap" class="hidden" style="overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 -16px; padding:0 16px;">
+      <div id="bracket-columns" style="display:flex; gap:12px; padding-bottom:8px;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== STATS TAB ===== -->
 <div id="tab-stats" class="lb-tab-content">
   <div class="stats-wrap">
@@ -581,8 +604,9 @@ function switchTab(tab, btn) {
   document.querySelectorAll('.lb-tab-content').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'bracket') loadBracket();
-  if (tab === 'stats')   loadStats();
+  if (tab === 'bracket')  loadBracket();
+  if (tab === 'stats')    loadStats();
+  if (tab === 'knockout') loadKnockoutBracket();
 }
 
 // ---- STANDINGS ----
@@ -1054,6 +1078,96 @@ function closeModal(event) {
     document.getElementById('match-modal').classList.add('hidden');
     document.body.style.overflow = '';
   }
+}
+
+// ---- KNOCKOUT BRACKET TAB ----
+let bracketDataFull   = [];
+let currentBracketStage = null;
+const BRACKET_STAGE_ORDER  = ['R32','R16','QF','SF','3rd','Final'];
+const BRACKET_STAGE_LABELS = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-Final', SF:'Semi-Final', '3rd':'3rd Place', Final:'Final' };
+const BRACKET_STAGE_SHORT  = { R32:'R32', R16:'R16', QF:'QF', SF:'SF', '3rd':'3rd', Final:'Final' };
+
+async function loadKnockoutBracket() {
+  document.getElementById('bracket-loading').classList.remove('hidden');
+  document.getElementById('bracket-empty').classList.add('hidden');
+  document.getElementById('bracket-scroll-wrap').classList.add('hidden');
+  try {
+    const res  = await fetch(API_URL + '?action=get_bracket');
+    const data = await res.json();
+    bracketDataFull = data.bracket || [];
+    renderKnockoutBracket();
+  } catch(e) {
+    document.getElementById('bracket-loading').innerHTML = '<div style="color:var(--danger)">⚠️ Could not load bracket.</div>';
+  }
+}
+
+function renderKnockoutBracket() {
+  document.getElementById('bracket-loading').classList.add('hidden');
+
+  if (!bracketDataFull.length) {
+    document.getElementById('bracket-empty').classList.remove('hidden');
+    document.getElementById('bracket-stage-pills').innerHTML = '';
+    return;
+  }
+  document.getElementById('bracket-scroll-wrap').classList.remove('hidden');
+
+  // Stage pills — only enabled for stages that actually have data
+  const pillsDiv = document.getElementById('bracket-stage-pills');
+  pillsDiv.innerHTML = BRACKET_STAGE_ORDER.map(stage => {
+    const hasData = bracketDataFull.some(b => b.Stage === stage);
+    if (!hasData) {
+      return `<div class="view-toggle-btn" style="opacity:0.3;pointer-events:none">${BRACKET_STAGE_SHORT[stage]}</div>`;
+    }
+    const activeCls = (stage === currentBracketStage) ? ' active' : '';
+    return `<div class="view-toggle-btn${activeCls}" data-stage="${stage}" onclick="scrollToBracketStage('${stage}')">${BRACKET_STAGE_SHORT[stage]}</div>`;
+  }).join('');
+
+  // Columns, left to right, only for stages with data
+  const colsDiv = document.getElementById('bracket-columns');
+  colsDiv.innerHTML = BRACKET_STAGE_ORDER.map(stage => {
+    const matches = bracketDataFull.filter(b => b.Stage === stage).sort((a,b) => Number(a.Position||0) - Number(b.Position||0));
+    if (!matches.length) return '';
+    return `
+      <div class="bracket-col" id="bracket-col-${stage}">
+        <div class="bracket-col-title">${BRACKET_STAGE_LABELS[stage] || stage}</div>
+        ${matches.map(renderBracketMatchRow).join('')}
+      </div>`;
+  }).join('');
+
+  // Default to the furthest-along stage with data, so people land on
+  // "what's currently happening" without an extra tap
+  if (!currentBracketStage || !bracketDataFull.some(b => b.Stage === currentBracketStage)) {
+    const furthest = [...BRACKET_STAGE_ORDER].reverse().find(s => bracketDataFull.some(b => b.Stage === s));
+    if (furthest) currentBracketStage = furthest;
+  }
+  if (currentBracketStage) {
+    setTimeout(() => scrollToBracketStage(currentBracketStage, true), 80);
+  }
+}
+
+function renderBracketMatchRow(m) {
+  const hasWinner = !!m.Winner;
+  const t1Class = hasWinner ? (m.Winner === m.Team1 ? 'winner' : 'loser') : '';
+  const t2Class = hasWinner ? (m.Winner === m.Team2 ? 'winner' : 'loser') : '';
+  const team1   = (m.Team1 && m.Team1 !== 'TBD') ? esc(m.Team1) : 'TBD';
+  const team2   = (m.Team2 && m.Team2 !== 'TBD') ? esc(m.Team2) : 'TBD';
+  const dateStr = m.Date ? `${esc(m.Date)} EAT` : '';
+  return `
+    <div class="bracket-match-row">
+      <div class="bmr-num">Match ${esc(m.Position||'')}</div>
+      <div class="bmr-team ${t1Class}">${team1}${hasWinner && m.Winner===m.Team1 ? ' 🏆' : ''}</div>
+      <div class="bmr-team ${t2Class}">${team2}${hasWinner && m.Winner===m.Team2 ? ' 🏆' : ''}</div>
+      ${dateStr ? `<div class="bmr-date">${dateStr}</div>` : ''}
+    </div>`;
+}
+
+function scrollToBracketStage(stage, skipSmooth) {
+  currentBracketStage = stage;
+  const col = document.getElementById('bracket-col-' + stage);
+  if (col) col.scrollIntoView({ behavior: skipSmooth ? 'auto' : 'smooth', inline:'start', block:'nearest' });
+  document.querySelectorAll('#bracket-stage-pills .view-toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.stage === stage);
+  });
 }
 
 function esc(str) {
