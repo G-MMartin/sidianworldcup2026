@@ -1528,7 +1528,13 @@ function toggleShowMore(id, btn) {
 // Init
 loadLeaderboard();
 setInterval(loadLeaderboard, 3 * 60 * 1000);
-updateFabVisibility();
+// The FAB element is defined just below this script, so wait until the
+// DOM is fully parsed before toggling its visibility on first load.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', updateFabVisibility);
+} else {
+  updateFabVisibility();
+}
 </script>
 <div class="fab-search hidden-fab" id="fab-search">
   <button class="fab-search-btn" onclick="toggleFabSearch()" aria-label="Search">🔍</button>
