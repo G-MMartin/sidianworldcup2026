@@ -411,6 +411,29 @@
     .mp-count { font-size:0.88rem; font-weight:800; color:var(--primary-light); }
     .stats-loading { text-align:center; padding:40px; color:var(--muted); }
 
+    /* ===== FLOATING SEARCH FAB ===== */
+    .fab-search { position:fixed; bottom:20px; left:20px; z-index:200; display:flex; align-items:center; }
+    .fab-search.hidden-fab { display:none; }
+    .fab-search-btn {
+      width:52px; height:52px; border-radius:50%; flex-shrink:0;
+      background:linear-gradient(145deg, var(--primary-light), var(--primary));
+      border:none; cursor:pointer; font-size:1.3rem;
+      box-shadow:0 4px 14px rgba(244,195,33,0.45), 0 1px 0 rgba(255,255,255,0.4) inset;
+      display:flex; align-items:center; justify-content:center;
+      transition:transform 0.2s, box-shadow 0.2s; color:#000;
+    }
+    .fab-search-btn:active { transform:scale(0.92); }
+    .fab-search-input {
+      width:0; opacity:0; padding:0; margin-left:0; border:none; outline:none;
+      height:48px; border-radius:24px; font-size:0.9rem; font-weight:600;
+      background:var(--card); color:var(--text); border:1px solid var(--primary);
+      transition:width 0.28s ease, opacity 0.2s ease, padding 0.28s ease, margin-left 0.28s ease;
+      box-shadow:0 4px 14px rgba(0,0,0,0.5);
+    }
+    .fab-search.open .fab-search-input { width:200px; opacity:1; padding:0 16px; margin-left:10px; }
+    .fab-search.open .fab-search-btn { box-shadow:0 4px 14px rgba(244,195,33,0.6), 0 1px 0 rgba(255,255,255,0.4) inset; }
+    .fab-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:199; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+    .fab-backdrop.show { opacity:1; pointer-events:auto; }
   </style>
 </head>
 <body>
@@ -602,7 +625,11 @@ function toggleLegend(toggleEl) {
 
 
 // ---- TABS ----
+let currentTab = 'standings';
+const SEARCHABLE_TABS = { standings:true, stats:true };
+
 function switchTab(tab, btn) {
+  currentTab = tab;
   document.querySelectorAll('.lb-tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.lb-tab-content').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
@@ -610,6 +637,51 @@ function switchTab(tab, btn) {
   if (tab === 'bracket')  loadBracket();
   if (tab === 'stats')    loadStats();
   if (tab === 'knockout') loadKnockoutBracket();
+  updateFabVisibility();
+}
+
+// ---- FLOATING SEARCH FAB ----
+function updateFabVisibility() {
+  const fab = document.getElementById('fab-search');
+  if (SEARCHABLE_TABS[currentTab]) {
+    fab.classList.remove('hidden-fab');
+  } else {
+    closeFabSearch();
+    fab.classList.add('hidden-fab');
+  }
+}
+
+function toggleFabSearch() {
+  const fab = document.getElementById('fab-search');
+  if (fab.classList.contains('open')) {
+    closeFabSearch();
+  } else {
+    fab.classList.add('open');
+    document.getElementById('fab-backdrop').classList.add('show');
+    setTimeout(() => document.getElementById('fab-search-input').focus(), 120);
+  }
+}
+
+function closeFabSearch() {
+  const fab = document.getElementById('fab-search');
+  fab.classList.remove('open');
+  document.getElementById('fab-backdrop').classList.remove('show');
+  const input = document.getElementById('fab-search-input');
+  if (input.value) { input.value = ''; fabSearchInput(''); }
+}
+
+// Routes the FAB query into whichever tab's existing search is active,
+// and mirrors it into that tab's own search box so the two stay in sync.
+function fabSearchInput(term) {
+  if (currentTab === 'standings') {
+    const box = document.getElementById('standings-search');
+    if (box) box.value = term;
+    filterStandingsSearch(term);
+  } else if (currentTab === 'stats') {
+    const box = document.getElementById('stats-search');
+    if (box) box.value = term;
+    filterStatsSearch(term);
+  }
 }
 
 // ---- STANDINGS ----
@@ -1421,5 +1493,11 @@ function toggleShowMore(id, btn) {
 // Init
 loadLeaderboard();
 setInterval(loadLeaderboard, 3 * 60 * 1000);
+updateFabVisibility();
 </script>
+<div class="fab-backdrop" id="fab-backdrop" onclick="closeFabSearch()"></div>
+<div class="fab-search hidden-fab" id="fab-search">
+  <button class="fab-search-btn" onclick="toggleFabSearch()" aria-label="Search">🔍</button>
+  <input type="text" class="fab-search-input" id="fab-search-input" placeholder="Search your name..." oninput="fabSearchInput(this.value)">
+</div>
 </body>
