@@ -859,9 +859,14 @@ function renderTournament(data) {
     const pos      = idx + 1;
     const posClass = pos === 1 ? 'pos-1' : pos === 2 ? 'pos-2' : pos === 3 ? 'pos-3' : '';
     const gdColor = (row.goalDiff||0) > 0 ? 'color:var(--success)' : (row.goalDiff||0) < 0 ? 'color:var(--danger)' : '';
-    return `<tr>
+    const isOut    = eliminatedTeams.has(row.team);
+    const rowStyle = isOut ? 'opacity:0.4' : '';
+    const teamCell = isOut
+      ? `${esc(row.team||'')} <span style="font-size:0.6rem;font-weight:700;color:var(--danger);background:rgba(255,68,68,0.15);padding:1px 5px;border-radius:3px;margin-left:4px">OUT</span>`
+      : esc(row.team||'');
+    return `<tr style="${rowStyle}">
       <td><span class="pos-badge ${posClass}">${pos}</span></td>
-      <td style="font-weight:600;font-size:0.78rem">${esc(row.team||'')}</td>
+      <td style="font-weight:600;font-size:0.78rem">${teamCell}</td>
       <td class="num">${row.played||0}</td>
       <td class="num" style="color:var(--success)">${row.won||0}</td>
       <td class="num" style="color:var(--warning)">${row.draw||0}</td>
