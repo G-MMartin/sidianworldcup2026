@@ -360,6 +360,7 @@
     .bracket-match-row .bmr-team.winner { color:var(--success); }
     .bracket-match-row .bmr-team.loser { opacity:0.45; text-decoration:line-through; color:var(--muted); }
     .bracket-match-row .bmr-date { font-size:0.6rem; color:var(--muted); margin-top:4px; text-align:right; }
+    .bracket-pair-divider { height:1px; background:linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent); margin:10px 4px 16px; opacity:0.7; }
     .show-more-btn { text-align:center; font-size:0.7rem; font-weight:700; color:var(--primary-light); padding:8px; cursor:pointer; user-select:none; border-radius:8px; background:var(--surface); border:1px solid var(--border); margin-top:2px; }
     .show-more-btn:hover { background:var(--card); }
 
@@ -414,6 +415,8 @@
     /* ===== FLOATING SEARCH FAB ===== */
     .fab-search { position:fixed; bottom:20px; left:20px; z-index:200; display:flex; align-items:center; }
     .fab-search.hidden-fab { display:none; }
+    .fab-search.fab-scrolling { transform:translateX(-120%); opacity:0; }
+    .fab-search { transition:transform 0.3s ease, opacity 0.3s ease; }
     .fab-search-btn {
       width:52px; height:52px; border-radius:50%; flex-shrink:0;
       background:linear-gradient(145deg, var(--primary-light), var(--primary));
@@ -503,7 +506,7 @@
         </ul>
       </div>
     </div>
-    <div class="search-wrap">
+    <div class="search-wrap" style="display:none">
       <input type="text" id="standings-search" placeholder="🔍 Search your name..." oninput="filterStandingsSearch(this.value)">
     </div>
     <div id="search-empty" class="empty hidden">No matching names found.</div>
@@ -571,7 +574,7 @@
       <div class="sex-toggle-btn" onclick="setStatsSexFilter('Male',this)">Male</div>
       <div class="sex-toggle-btn" onclick="setStatsSexFilter('Female',this)">Female</div>
     </div>
-    <div class="search-wrap">
+    <div class="search-wrap" style="display:none">
       <input type="text" id="stats-search" placeholder="🔍 Search your name..." oninput="filterStatsSearch(this.value)">
     </div>
     <div id="stats-search-empty" class="empty hidden">No matching names found.</div>
@@ -683,6 +686,19 @@ function fabSearchInput(term) {
     filterStatsSearch(term);
   }
 }
+
+// Auto-hide the FAB while actively scrolling, reappear once still.
+// (Skipped while the search is open, so typing isn't interrupted.)
+let fabScrollTimer = null;
+window.addEventListener('scroll', () => {
+  const fab = document.getElementById('fab-search');
+  if (!fab || fab.classList.contains('hidden-fab') || fab.classList.contains('open')) return;
+  fab.classList.add('fab-scrolling');
+  clearTimeout(fabScrollTimer);
+  fabScrollTimer = setTimeout(() => {
+    fab.classList.remove('fab-scrolling');
+  }, 600); // "still" = no scroll for 600ms
+}, { passive:true });
 
 // ---- STANDINGS ----
 let fullLeaderboard  = [];
@@ -1326,12 +1342,20 @@ function renderBracketColumns() {
 
   let cols = '';
 
-  // Left column: always the selected stage
+  // Left column: always the selected stage. A subtle divider is added
+  // after every PAIR of matches (every 2 rows), since each adjacent pair
+  // feeds one next-round match — this visually groups the tree and
+  // breaks up the flat look.
   const leftMatches = getStageMatches(stage);
+  const leftHtml = leftMatches.map((m, i) => {
+    const row = renderBracketMatchRow(m);
+    const isPairEnd = (i % 2 === 1) && (i < leftMatches.length - 1);
+    return row + (isPairEnd ? '<div class="bracket-pair-divider"></div>' : '');
+  }).join('');
   cols += `
     <div class="bracket-col" id="bracket-col-${stage}">
       <div class="bracket-col-title">${BRACKET_STAGE_LABELS[stage] || stage}</div>
-      ${leftMatches.map(renderBracketMatchRow).join('')}
+      ${leftHtml}
     </div>`;
 
   // Right column depends on the stage:
