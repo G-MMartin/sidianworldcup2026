@@ -1254,9 +1254,22 @@ const STAGE_DISPLAY_ORDER = {
   Final: [104]
 };
 
-// Resolve the FIFA M-number for any bracket row.
+// Cache of resolved M-numbers, keyed by a row's identity, cleared each
+// time fresh bracket data loads. Without this, the recursive feeder
+// resolution recomputes the same matches repeatedly on every render —
+// the cause of slow bracket loads.
+let _matchNumCache = new WeakMap();
+function clearMatchNumCache() { _matchNumCache = new WeakMap(); }
+
 function resolveMatchNumber(m) {
   if (m._synthNum) return m._synthNum;
+  if (_matchNumCache.has(m)) return _matchNumCache.get(m);
+  const result = _computeMatchNumber(m);
+  _matchNumCache.set(m, result);
+  return result;
+}
+
+function _computeMatchNumber(m) {
   if (m.Stage === 'R32') {
     var t1 = m.Team1, t2 = m.Team2;
     for (var i = 0; i < R32_MATCH_NUMBERS.length; i++) {
@@ -1265,11 +1278,29 @@ function resolveMatchNumber(m) {
         return R32_MATCH_NUMBERS[i].m;
       }
     }
-    return null; // unknown pairing — fall back gracefully
+    return null;
   }
-  var start = STAGE_MATCH_START[m.Stage];
-  if (start == null) return null;
-  return start + (Number(m.Position || 1) - 1);
+
+  // Later rounds: find the M-number for this stage whose expected feeder
+  // teams match this row's actual teams.
+  var startNum = STAGE_MATCH_START[m.Stage];
+  if (startNum == null) return null;
+  var stageNums = STAGE_DISPLAY_ORDER[m.Stage] || [];
+  var rt1 = m.Team1, rt2 = m.Team2;
+
+  for (var k = 0; k < stageNums.length; k++) {
+    var num = stageNums[k];
+    var feeders = MATCH_FEEDERS[num];
+    if (!feeders) continue;
+    var exp1 = resolveFeederCode(feeders[0]);
+    var exp2 = resolveFeederCode(feeders[1]);
+    if (rt1 && rt1 !== 'TBD' && rt2 && rt2 !== 'TBD') {
+      if ((rt1 === exp1 && rt2 === exp2) || (rt1 === exp2 && rt2 === exp1)) return num;
+    } else if (rt1 && rt1 !== 'TBD') {
+      if (rt1 === exp1 || rt1 === exp2) return num;
+    }
+  }
+  return null;
 }
 
 const BRACKET_STAGE_LABELS = { R32:'Round of 32', R16:'Round of 16', QF:'Quarter-Final', SF:'Semi-Final', '3rd':'3rd Place', Final:'Final' };
@@ -1283,6 +1314,7 @@ async function loadKnockoutBracket() {
     const res  = await fetch(API_URL + '?action=get_bracket');
     const data = await res.json();
     bracketDataFull = data.bracket || [];
+    clearMatchNumCache();
     renderKnockoutBracket();
   } catch(e) {
     document.getElementById('bracket-loading').innerHTML = '<div style="color:var(--danger)">⚠️ Could not load bracket.</div>';
