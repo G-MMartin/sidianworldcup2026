@@ -732,6 +732,10 @@ async function loadLeaderboard() {
   try {
     const res  = await fetch(API_URL + '?action=leaderboard');
     const data = await res.json();
+    if (data.building) {
+      document.getElementById('loading').innerHTML = '<div style="color:var(--muted)">⏳ Leaderboard is being prepared — check back in a moment.</div>';
+      return;
+    }
     fullLeaderboard = data.leaderboard || [];
     eliminatedTeams = new Set(data.eliminatedTeams || []);
     picksData = fullLeaderboard;
@@ -994,6 +998,10 @@ async function loadStats() {
   try {
     const res  = await fetch(API_URL + '?action=get_stats');
     const data = await res.json();
+    if (data.building) {
+      document.getElementById('stats-loading').innerHTML = '<div style="color:var(--muted)">⏳ Stats are being prepared — check back in a moment.</div>';
+      return;
+    }
     fullStatsData = data;
     renderStats(data);
   } catch(e) {
