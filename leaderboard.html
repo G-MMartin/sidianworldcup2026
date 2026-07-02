@@ -637,7 +637,7 @@
   <div class="modal-sheet">
     <div class="modal-header">
       <div class="modal-title" id="modal-title">Matches</div>
-      <button class="modal-close" onclick="document.getElementById('match-modal').classList.add('hidden')">✕</button>
+      <button class="modal-close" onclick="closeMatchModal()">✕</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
   </div>
@@ -703,6 +703,7 @@ let currentTab = 'standings';
 const SEARCHABLE_TABS = { standings:true, stats:true };
 
 function switchTab(tab, btn) {
+  closeMatchModal(); // safety net: never carry a scroll lock across tabs
   currentTab = tab;
   document.querySelectorAll('.lb-tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.lb-tab-content').forEach(c => c.classList.remove('active'));
@@ -1365,10 +1366,17 @@ function openMatchModal(playerIdx, type) {
   document.body.style.overflow = 'hidden';
 }
 
+// The ONLY way the modal should ever close: hides it AND releases the body
+// scroll lock set on open. (The ✕ button previously hid the modal without
+// releasing the lock — leaving the whole page unscrollable on every tab.)
+function closeMatchModal() {
+  document.getElementById('match-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
 function closeModal(event) {
   if (event.target === document.getElementById('match-modal')) {
-    document.getElementById('match-modal').classList.add('hidden');
-    document.body.style.overflow = '';
+    closeMatchModal();
   }
 }
 
